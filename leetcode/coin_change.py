@@ -59,7 +59,37 @@ class Solution:
     
     def coinChange(self, coins: list[int], amount: int) -> int:
         """
-        Find fewest number of coins to make amount.
+        Bottom-up DP - NO MEMOIZATION NEEDED!
+        
+        WHY BOTTOM-UP DOESN'T NEED MEMOIZATION:
+        ---------------------------------------
+        - Start with BASE CASE: amount = 0 (0 coins needed)
+        - Build UP to full solution: 0 → 1 → 2 → ... → amount
+        - Solve each subproblem exactly ONCE, in order
+        - No overlapping subproblems: dp[5] computed once, stored, used later
+        
+        ITERATIVE STRUCTURE:
+        - dp[0] = 0 (base case)
+        - dp[1] = min(1 + dp[0]) = 1
+        - dp[2] = min(1 + dp[1], 1 + dp[0]) = 2
+        - dp[3] = min(1 + dp[2], 1 + dp[1]) = 2
+        - ...
+        - dp[11] = min(1 + dp[10], 1 + dp[9], 1 + dp[6]) = 3
+        
+        KEY DIFFERENCE:
+        - Top-down: Multiple paths → same subproblem → NEEDS memoization
+        - Bottom-up: Single path, each amount computed once → NO memoization needed
+        
+        Example with amount=11, coins=[1,2,5]:
+        dp[0] = 0  ← computed once
+        dp[1] = 1  ← computed once (uses dp[0])
+        dp[2] = 1  ← computed once (uses dp[0], dp[1])
+        ...
+        dp[5] = 1  ← computed once (uses dp[0], dp[3], dp[4])
+        ...
+        dp[11] = 3 ← computed once (uses dp[6], dp[9], dp[10])
+        
+        Each dp[i] is computed exactly ONCE, in order!
         
         Args:
             coins: Array of coin denominations
@@ -72,10 +102,11 @@ class Solution:
         dp = [float('inf')] * (amount + 1)
         dp[0] = 0  # Base case: 0 coins for amount 0
         
-        # Build solution bottom-up
+        # Build solution bottom-up: solve smaller amounts first
         for i in range(1, amount + 1):
             for coin in coins:
                 if coin <= i:
+                    # Try using this coin: 1 coin + minimum for remaining amount
                     dp[i] = min(dp[i], 1 + dp[i - coin])
         
         return dp[amount] if dp[amount] != float('inf') else -1
@@ -83,19 +114,49 @@ class Solution:
     def coinChange_topdown(self, coins: list[int], amount: int) -> int:
         """
         Top-down DP with memoization.
+        
+        WHY TOP-DOWN NEEDS MEMOIZATION:
+        --------------------------------
+        - Start with FULL problem: amount = 11
+        - Break down into SMALLER subproblems: 11 → 10, 9, 6 (trying coins 1, 2, 5)
+        - Recurse DOWN: 11 → 10 → 9 → 8 → ... → 0 (base case)
+        
+        OVERLAPPING SUBPROBLEMS:
+        - amount=5 might be computed from multiple paths:
+          * 11 → 10 → 9 → 8 → 7 → 6 → 5
+          * 11 → 9 → 7 → 5
+          * 11 → 6 → 5
+        - Without memoization: Exponential recomputation (O(2^n))
+        - With @lru_cache: Each amount computed ONCE (O(amount * coins))
+        
+        Example call tree (without memoization):
+        dfs(11)
+          ├─ dfs(10)  ← amount=10 computed
+          │   ├─ dfs(9)
+          │   │   └─ dfs(8) → ... → dfs(5)  ← amount=5 computed
+          │   └─ dfs(8) → ... → dfs(5)  ← amount=5 computed AGAIN!
+          ├─ dfs(9)
+          │   └─ dfs(7) → ... → dfs(5)  ← amount=5 computed AGAIN!
+          └─ dfs(6)
+              └─ dfs(5)  ← amount=5 computed AGAIN!
+        
+        With memoization: dfs(5) computed ONCE, cached, reused!
         """
         from functools import lru_cache
         
-        @lru_cache(maxsize=None)
+        @lru_cache(maxsize=None)  # MEMOIZATION IS ESSENTIAL!
         def dfs(remaining: int) -> int:
+            # Base case: exact amount reached
             if remaining == 0:
                 return 0
+            # Invalid: negative amount
             if remaining < 0:
                 return float('inf')
             
+            # Try each coin, take minimum
             min_coins = float('inf')
             for coin in coins:
-                result = dfs(remaining - coin)
+                result = dfs(remaining - coin)  # Recursive call to smaller subproblem
                 min_coins = min(min_coins, 1 + result)
             
             return min_coins
@@ -165,6 +226,132 @@ def test_coin_change():
     print("\nAll tests passed!")
 
 
+def explain_top_down_vs_bottom_up_coin_change():
+    """
+    Comprehensive explanation of Top-Down vs Bottom-Up for Coin Change.
+    This problem PERFECTLY demonstrates why top-down needs memoization but bottom-up doesn't.
+    """
+    print("=" * 70)
+    print("TOP-DOWN vs BOTTOM-UP: Coin Change Example")
+    print("=" * 70)
+    
+    coins = [1, 2, 5]
+    amount = 11
+    
+    print(f"\nProblem: coins={coins}, amount={amount}")
+    print(f"Answer: 3 coins (5 + 5 + 1)")
+    
+    print("\n" + "=" * 70)
+    print("1. TOP-DOWN DFS (with memoization)")
+    print("=" * 70)
+    print("\nDirection: Full problem → Base case")
+    print("  Start: amount = 11 (full problem)")
+    print("  Break down: 11 → try coins → 10, 9, 6 (smaller subproblems)")
+    print("  Recurse: 11 → 10 → 9 → 8 → ... → 0 (base case)")
+    print("  Base case: amount = 0 (0 coins needed)")
+    
+    print("\nCall Tree (showing overlapping subproblems):")
+    print("  dfs(11)")
+    print("    ├─ dfs(10)  [amount=10 computed]")
+    print("    │   ├─ dfs(9)")
+    print("    │   │   └─ ... → dfs(5)  [amount=5 computed]")
+    print("    │   └─ ... → dfs(5)  [amount=5 computed AGAIN!]")
+    print("    ├─ dfs(9)")
+    print("    │   └─ ... → dfs(5)  [amount=5 computed AGAIN!]")
+    print("    └─ dfs(6)")
+    print("        └─ dfs(5)  [amount=5 computed AGAIN!]")
+    
+    print("\nWHY MEMOIZATION IS NEEDED:")
+    print("  ✗ Without memoization: amount=5 computed 4+ times → O(2^n) time!")
+    print("  ✓ With @lru_cache: amount=5 computed ONCE, cached, reused → O(amount*coins)")
+    print("  → Memoization prevents exponential recomputation")
+    
+    print("\n" + "=" * 70)
+    print("2. BOTTOM-UP DP (no memoization needed)")
+    print("=" * 70)
+    print("\nDirection: Base case → Full problem")
+    print("  Start: amount = 0 (base case, 0 coins)")
+    print("  Build up: 0 → 1 → 2 → 3 → ... → 11 (full solution)")
+    print("  Each amount computed exactly ONCE, in order")
+    
+    print("\nDP Table Construction:")
+    print("  dp[0] = 0  ← Base case (computed once)")
+    print("  dp[1] = 1  ← Uses dp[0] (computed once)")
+    print("  dp[2] = 1  ← Uses dp[0], dp[1] (computed once)")
+    print("  dp[3] = 2  ← Uses dp[1], dp[2] (computed once)")
+    print("  dp[4] = 2  ← Uses dp[2], dp[3] (computed once)")
+    print("  dp[5] = 1  ← Uses dp[0], dp[3], dp[4] (computed ONCE)")
+    print("  ...")
+    print("  dp[11] = 3 ← Uses dp[6], dp[9], dp[10] (computed once)")
+    
+    print("\nWHY NO MEMOIZATION NEEDED:")
+    print("  ✓ Each dp[i] computed exactly ONCE, in order")
+    print("  ✓ No overlapping subproblems (we iterate sequentially)")
+    print("  ✓ dp[i] depends only on previously computed values")
+    print("  ✓ DP table stores results, but no cache lookup needed")
+    print("  → Natural structure avoids recomputation")
+    
+    print("\n" + "=" * 70)
+    print("3. SIDE-BY-SIDE COMPARISON")
+    print("=" * 70)
+    print("\n┌─────────────────────┬──────────────────────┬──────────────────────┐")
+    print("│ Aspect              │ Top-Down DFS         │ Bottom-Up DP         │")
+    print("├─────────────────────┼──────────────────────┼──────────────────────┤")
+    print("│ Direction           │ 11 → 10 → ... → 0   │ 0 → 1 → ... → 11   │")
+    print("│ Structure           │ Recursive            │ Iterative            │")
+    print("│ Starting Point     │ Full problem (11)    │ Base case (0)        │")
+    print("│ Subproblems         │ Can overlap          │ Solved once          │")
+    print("│ Memoization         │ NEEDED ✓             │ NOT NEEDED ✗         │")
+    print("│ Storage             │ Cache + Stack        │ DP table only        │")
+    print("│ Time (with memo)    │ O(amount × coins)   │ O(amount × coins)    │")
+    print("│ Time (without memo) │ O(2^amount) ✗        │ O(amount × coins) ✓  │")
+    print("│ Space               │ O(amount) cache      │ O(amount) DP table   │")
+    print("│ Natural fit         │ Recursive thinking   │ Iterative thinking   │")
+    print("└─────────────────────┴──────────────────────┴──────────────────────┘")
+    
+    print("\n" + "=" * 70)
+    print("4. KEY INSIGHT")
+    print("=" * 70)
+    print("\nTop-Down:")
+    print("  - Natural recursive thinking: 'To solve amount=11, try each coin...'")
+    print("  - Multiple paths can reach same subproblem (amount=5)")
+    print("  - MEMOIZATION IS ESSENTIAL to avoid exponential time")
+    print("\nBottom-Up:")
+    print("  - Natural iterative thinking: 'Start from 0, build up to 11...'")
+    print("  - Each subproblem solved exactly once, in order")
+    print("  - NO MEMOIZATION NEEDED - structure prevents recomputation")
+    print("\nBoth are correct! Choose based on:")
+    print("  - Top-Down: Easier to think recursively, but needs memoization")
+    print("  - Bottom-Up: More structured, naturally efficient, no memoization")
+
+
+def compare_implementations():
+    """Compare top-down and bottom-up implementations"""
+    print("=" * 70)
+    print("COMPARING IMPLEMENTATIONS")
+    print("=" * 70)
+    
+    sol = Solution()
+    test_cases = [
+        ([1, 2, 5], 11),
+        ([2], 3),
+        ([1], 0),
+        ([1, 3, 4], 6),
+    ]
+    
+    for coins, amount in test_cases:
+        result_bottom_up = sol.coinChange(coins, amount)
+        result_top_down = sol.coinChange_topdown(coins, amount)
+        
+        print(f"\ncoins={coins}, amount={amount}")
+        print(f"  Bottom-Up: {result_bottom_up}")
+        print(f"  Top-Down:  {result_top_down}")
+        print(f"  Match: {'✓' if result_bottom_up == result_top_down else '✗'}")
+        assert result_bottom_up == result_top_down, "Results don't match!"
+    
+    print("\n✓ Both implementations produce identical results!")
+
+
 if __name__ == "__main__":
     test_coin_change()
     
@@ -178,5 +365,13 @@ if __name__ == "__main__":
     print(f"Coins: {coins}")
     print(f"Amount: {amount}")
     print(f"Minimum coins needed: {result}")
+    
+    # Compare implementations
+    print("\n")
+    compare_implementations()
+    
+    # Detailed explanation
+    print("\n")
+    explain_top_down_vs_bottom_up_coin_change()
 # %%
 

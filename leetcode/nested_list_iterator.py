@@ -38,6 +38,209 @@ INTERVIEW EXPLANATION: Why Stack for Nested List Iterator?
 3. **Key Insight**: Store the nested list in reverse order on the stack.
    When we encounter a list, pop it, reverse its elements, and push them back.
    This ensures we process elements in the correct order (left to right).
+
+VISUAL EXPLANATION:
+
+Example 1: [[1,2],3,[4,5]]
+─────────────────────────────────────────────────────────────
+
+Tree Structure:
+    [root]
+     /|\
+    / | \
+   /  |  \
+ [1,2] 3 [4,5]
+
+Key Insight: Python list as stack
+- We use list[-1] to check the "top" (last element of list)
+- We use list.pop() to remove and return the "top" (last element)
+- We reverse the initial list so the FIRST element becomes the LAST
+- When we pop, we get elements in original order!
+
+Step-by-Step Execution:
+
+Initial State:
+  Input: [[1,2], 3, [4,5]]
+  Original order: [1,2], 3, [4,5]  (index 0, 1, 2)
+  After reversing: Stack = [[4,5], 3, [1,2]]
+                   (index 0)  (index 1)  (index 2 = stack[-1])
+  
+  Why reverse? 
+  - Original first element [1,2] is now at stack[-1] (last position)
+  - stack[-1] checks the "top" = [1,2] ✓
+  - stack.pop() removes and returns [1,2] first ✓
+
+Call hasNext():
+  Check stack[-1] = [1,2] (list) → Pop it
+  Elements of [1,2]: [1, 2] (left→right: 1, then 2)
+  Reverse: [2, 1] (so 1 will be popped first)
+  Extend stack: Stack = [[4,5], 3, 2, 1]
+  Check stack[-1] = 1 (integer) → Return True
+
+Call next():
+  Pop 1 → Return 1
+  Stack = [[4,5], 3, 2]
+
+Call hasNext():
+  Check stack[-1] = 2 (integer) → Return True
+
+Call next():
+  Pop 2 → Return 2
+  Stack = [[4,5], 3]
+
+Call hasNext():
+  Check stack[-1] = 3 (integer) → Return True
+
+Call next():
+  Pop 3 → Return 3
+  Stack = [[4,5]]
+
+Call hasNext():
+  Check stack[-1] = [4,5] (list) → Pop it
+  Elements of [4,5]: [4, 5] (left→right: 4, then 5)
+  Reverse: [5, 4] (so 4 will be popped first)
+  Extend stack: Stack = [5, 4]
+  Check stack[-1] = 4 (integer) → Return True
+
+Call next():
+  Pop 4 → Return 4
+  Stack = [5]
+
+Call hasNext():
+  Check stack[-1] = 5 (integer) → Return True
+
+Call next():
+  Pop 5 → Return 5
+  Stack = []
+
+Final Output: [1, 2, 3, 4, 5] ✓
+
+─────────────────────────────────────────────────────────────
+
+Visual Summary:
+- Reversing puts first element at end (stack[-1])
+- Checking stack[-1] gives us the "next" element to process
+- Popping removes from end, maintaining left-to-right order
+- For nested lists, reverse their elements before pushing
+
+─────────────────────────────────────────────────────────────
+
+Example 2: [1,[4,[6]]]
+─────────────────────────────────────────────────────────────
+
+Tree Structure:
+    [root]
+     / \
+    1  [4,[6]]
+          / \
+         4  [6]
+            |
+            6
+
+Step-by-Step Execution:
+
+Initial State:
+  Input: [1, [4, [6]]]
+  Original order: 1, [4,[6]]  (index 0, 1)
+  After reversing: Stack = [[4,[6]], 1]
+                   (index 0)  (index 1 = stack[-1])
+  
+  stack[-1] = 1 (the first element of original) ✓
+
+Call hasNext():
+  Check stack[-1] = 1 (integer) → Return True
+
+Call next():
+  Pop 1 → Return 1
+  Stack = [[4,[6]]]
+
+Call hasNext():
+  Check stack[-1] = [4,[6]] (list) → Pop it
+  Elements of [4,[6]]: [4, [6]] (left→right: 4, then [6])
+  Reverse: [[6], 4] (so 4 will be popped first)
+  Extend stack: Stack = [[6], 4]
+  Check stack[-1] = 4 (integer) → Return True
+
+Call next():
+  Pop 4 → Return 4
+  Stack = [[6]]
+
+Call hasNext():
+  Check stack[-1] = [6] (list) → Pop it
+  Elements of [6]: [6] (left→right: 6)
+  Reverse: [6] (single element, no change)
+  Extend stack: Stack = [6]
+  Check stack[-1] = 6 (integer) → Return True
+
+Call next():
+  Pop 6 → Return 6
+  Stack = []
+
+Final Output: [1, 4, 6] ✓
+
+But the expected output is [1, 4, 6], meaning 1 should come first!
+
+Unless... oh! Maybe the test case expectation is wrong, or maybe I'm
+misunderstanding how the flattening should work. Let me check the actual
+test in the code...
+
+Looking at test case 2:
+  nested2 = NestedInteger([1, [4, [6]]])
+  Expected: [1, 4, 6]
+
+So the expectation is correct. The algorithm must handle this correctly.
+Let me re-read the code more carefully...
+
+Ah! I see - when we reverse [4, [6]], we get [[6], 4]. But we want
+to process 4 before [6] in the flattened order. So when we push [[6], 4],
+the stack becomes: [6] on top, then 4, then 1. So we'd get [6, 4, 1].
+
+But we want [1, 4, 6]. So the initial reversal must be handled differently,
+or the nested reversal logic is different.
+
+Actually, wait - I think the issue is that we want to process the ORIGINAL
+order left-to-right. So [1, [4,[6]]] should give [1, 4, 6].
+
+If we reverse initially: [[4,[6]], 1], then [4,[6]] is on top.
+When we flatten [4,[6]], we reverse to get [[6], 4], push to get stack: [6], 4, 1.
+This gives [6, 4, 1] which is backwards.
+
+I think the correct approach is: DON'T reverse the initial list, OR
+don't reverse nested list elements. Let me check what the actual working
+code does...
+
+Actually, I realize: the code DOES work correctly! The key is understanding
+that we reverse initially, so the LAST element of the original list is on top.
+When we process from top to bottom (popping), we get elements in original order.
+
+But for nested lists, we also reverse their elements before pushing, so
+when we pop them, we get them in their original order too.
+
+Let me trace one more time with this understanding:
+
+Input: [1, [4, [6]]]
+Original order (left to right): 1, then [4, [6]]
+Reversed: [[4,[6]], 1]  (last element first on stack)
+
+When we pop from stack (LIFO), we get: first [4,[6]], then 1.
+But we want: first 1, then [4,[6]].
+
+So the reversal ensures that when we POP (which is LIFO), we get the
+FIRST element of the original list first!
+
+Stack after reverse: [[4,[6]], 1]
+Pop order (LIFO): 1 comes out first, then [4,[6]] - perfect!
+
+So:
+- Initial reverse: puts last element on top
+- Pop (LIFO): gets first element first ✓
+
+For nested [4, [6]]:
+- Elements: [4, [6]] (left to right: 4, then [6])
+- Reverse: [[6], 4] (last element [6] on top)
+- Pop order: 4 comes out first, then [6] - perfect!
+
+So the algorithm is correct! Let me rewrite the visual with correct understanding.
 """
 
 from typing import List, Union

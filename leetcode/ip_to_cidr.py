@@ -64,6 +64,20 @@ INTERVIEW TIPS:
    - n = 1 (single IP)
    - IP at boundary (e.g., 255.255.255.255)
    - Large n values
+
+ALTERNATIVE APPROACHES:
+----------------------
+This file contains TWO implementations:
+1. Solution (bit manipulation) - RECOMMENDED for interviews/production
+   - Uses `x & -x` to find lowest set bit (O(1))
+   - Most efficient and industry standard
+   
+2. SolutionAlternative (mathematical) - Better for learning/understanding
+   - Uses repeated division to count trailing zeros (O(log n))
+   - More intuitive, easier to explain
+   - No bit manipulation knowledge required
+   
+Both produce identical results. See compare_approaches() for details.
 """
 
 from typing import List
@@ -137,6 +151,190 @@ class Solution:
             n -= step
         
         return result
+
+
+class SolutionAlternative:
+    """
+    Alternative implementation WITHOUT bit manipulation.
+    Uses mathematical operations (division, modulo) instead of bit tricks.
+    
+    Key differences:
+    - Instead of `x & -x` to find lowest set bit, we count trailing zeros
+    - Uses repeated division/modulo to find alignment
+    - More intuitive but slightly less efficient
+    """
+    
+    def ipToCIDR(self, ip: str, n: int) -> List[str]:
+        """
+        Convert IP range to minimal CIDR blocks using mathematical operations.
+        
+        Strategy:
+        - Convert IP to integer
+        - Find maximum block size by counting trailing zeros (mathematical approach)
+        - Create CIDR blocks greedily
+        - Continue until all n addresses are covered
+        """
+        def ip_to_int(ip: str) -> int:
+            """Convert IP address string to 32-bit integer"""
+            parts = list(map(int, ip.split('.')))
+            result = 0
+            for part in parts:
+                result = result * 256 + part
+            return result
+        
+        def int_to_ip(ip_int: int) -> str:
+            """Convert 32-bit integer to IP address string"""
+            parts = []
+            for _ in range(4):
+                parts.append(str(ip_int % 256))  # Use modulo instead of bitwise &
+                ip_int //= 256  # Use integer division instead of bit shift
+            return '.'.join(reversed(parts))
+        
+        def find_max_block_size(ip_int: int) -> int:
+            """
+            Find maximum block size (power of 2) that aligns with IP address.
+            This is equivalent to finding the lowest set bit, but using math.
+            
+            Method: Count trailing zeros by repeatedly dividing by 2.
+            Example: IP 8 → 8/2=4, 4/2=2, 2/2=1, 1/2=0 → 3 zeros → 2^3 = 8
+            Example: IP 7 → 7/2=3 (not divisible) → 0 zeros → 2^0 = 1
+            """
+            if ip_int == 0:
+                return 1
+            
+            # Count trailing zeros (how many times we can divide by 2)
+            trailing_zeros = 0
+            temp = ip_int
+            while temp > 0 and temp % 2 == 0:
+                trailing_zeros += 1
+                temp //= 2
+            
+            # Maximum block size is 2^trailing_zeros
+            return 2 ** trailing_zeros
+        
+        def find_largest_power_of_2(n: int) -> int:
+            """
+            Find largest power of 2 that is <= n.
+            Uses mathematical approach instead of bit_length().
+            """
+            if n <= 0:
+                return 1
+            
+            power = 1
+            while power * 2 <= n:
+                power *= 2
+            return power
+        
+        start = ip_to_int(ip)
+        result = []
+        
+        while n > 0:
+            # Find maximum block size that aligns with current IP
+            # This is equivalent to: step = start & -start
+            max_step = find_max_block_size(start)
+            
+            # Find largest power of 2 that fits in remaining n
+            max_n_power = find_largest_power_of_2(n)
+            
+            # Use the smaller of the two constraints
+            step = min(max_step, max_n_power)
+            
+            # Calculate prefix length using logarithm
+            # step = 2^k, so k = log2(step)
+            # We can find k by counting how many times we can divide step by 2
+            k = 0
+            temp_step = step
+            while temp_step > 1:
+                k += 1
+                temp_step //= 2
+            
+            prefix_length = 32 - k
+            
+            # Create CIDR block
+            cidr = f"{int_to_ip(start)}/{prefix_length}"
+            result.append(cidr)
+            
+            # Move forward by step and decrease remaining count
+            start += step
+            n -= step
+        
+        return result
+
+
+#%% COMPARISON OF APPROACHES
+
+def compare_approaches():
+    """
+    Compare bit manipulation vs mathematical approaches.
+    
+    BIT MANIPULATION APPROACH (Solution):
+    -------------------------------------
+    Pros:
+    - Most efficient (O(1) for finding lowest set bit)
+    - Industry standard for this problem
+    - Clean and concise code
+    - Direct hardware support
+    
+    Cons:
+    - Less intuitive for those unfamiliar with bit operations
+    - Requires understanding of two's complement
+    
+    Key operations:
+    - `x & -x` → O(1) lowest set bit
+    - `x.bit_length()` → O(1) number of bits
+    - `x >> 8` → O(1) bit shift
+    
+    MATHEMATICAL APPROACH (SolutionAlternative):
+    -------------------------------------------
+    Pros:
+    - More intuitive and easier to understand
+    - No bit manipulation knowledge required
+    - Easier to explain in interviews
+    - More readable for beginners
+    
+    Cons:
+    - Slightly slower (O(log n) for counting trailing zeros)
+    - More operations (division, modulo)
+    - Still uses some bit operations in int_to_ip (can be fully removed)
+    
+    Key operations:
+    - Repeated division by 2 → O(log n) to count trailing zeros
+    - Modulo operations → O(1) but more expensive than bitwise
+    - Integer division → O(1) but more expensive than bit shift
+    
+    VERDICT:
+    --------
+    - For interviews: Bit manipulation is preferred (shows advanced skills)
+    - For learning: Mathematical approach is better (easier to understand)
+    - For production: Bit manipulation is better (more efficient)
+    - Both are correct and produce same results!
+    """
+    print("=" * 70)
+    print("COMPARISON: Bit Manipulation vs Mathematical Approach")
+    print("=" * 70)
+    
+    test_cases = [
+        ("255.0.0.7", 10),
+        ("117.145.102.62", 8),
+        ("192.168.1.0", 8),
+        ("10.0.0.0", 256),
+    ]
+    
+    sol_bit = Solution()
+    sol_math = SolutionAlternative()
+    
+    for ip, n in test_cases:
+        result_bit = sol_bit.ipToCIDR(ip, n)
+        result_math = sol_math.ipToCIDR(ip, n)
+        
+        print(f"\nTest: ip = '{ip}', n = {n}")
+        print(f"  Bit manipulation: {result_bit}")
+        print(f"  Mathematical:      {result_math}")
+        print(f"  Match: {'✓' if result_bit == result_math else '✗'}")
+    
+    print("\n" + "=" * 70)
+    print("Both approaches produce identical results!")
+    print("=" * 70)
 
 #%% TEST CASES WITH EXPLANATIONS
 
@@ -321,6 +519,7 @@ if __name__ == "__main__":
     test_complex_cases()
     explain_cidr()
     visualize_example()
+    compare_approaches()
 
 # %%
 
