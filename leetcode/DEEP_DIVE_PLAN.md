@@ -1,10 +1,10 @@
 # 🎯 One-Day Deep Dive (Interview Tomorrow)
 
-You’re interviewing tomorrow, so this doc is now a **one-day algorithm review** (not a multi-week plan).
+You're interviewing tomorrow, so this doc is now a **one-day algorithm review** (not a multi-week plan).
 
 Goals for today:
 - Refresh the **highest-leverage patterns** (sliding window, BFS shortest path, DP, graphs/topo, backtracking)
-- Build a **mental index**: “If I see X, I use Y template”
+- Build a **mental index**: "If I see X, I use Y template"
 - Do 1–2 timed reps to warm up (not 20 new problems)
 
 ---
@@ -153,7 +153,7 @@ What to review here (fast):
 
 ## 📅 One-day review schedule (practical, interview-eve)
 
-### Block A (60–90 min): “Must-hit” patterns
+### Block A (60–90 min): "Must-hit" patterns
 - Sliding window: `minimum_window_substring.py` (say the invariant out loud)
 - BFS shortest path: `shortest_path_binary_matrix.py` + skim `shortest_path_get_all_keys.py` state encoding
 - DP: `coin_change.py` (state + transition + base cases)
@@ -176,9 +176,199 @@ What to review here (fast):
 
 ---
 
-## 🔍 “Common misses” checklist (use before you end the day)
-- **Shortest path**: did I justify BFS vs Dijkstra vs DP-with-steps?
-- **Sliding window**: do I track “missing” or “formed” correctly?
-- **DP**: did I define state + transition clearly before coding?
-- **Graphs**: cycle detection and visited semantics (node vs state)?
+## 🔍 "Common misses" checklist (use before you end the day)
 
+### 1. **Shortest Path: BFS vs Dijkstra vs DP-with-steps**
+
+**Common Mistake**: Using BFS when you need to track extra state (stops, keys, etc.)
+
+**Example - Wrong**:
+```python
+# shortest_path_binary_matrix.py - BFS works (unweighted, no extra state)
+queue = deque([(0, 0)])
+visited = {(0, 0)}  # Just position
+
+# cheapest_flights_k_stops.py - BFS FAILS here!
+# Wrong: visited = {city}  # Can't revisit same city with fewer stops
+# Right: visited = {(city, stops_used)}  # State includes stops dimension
+```
+
+**When to use what**:
+- **BFS**: Unweighted graph, no constraints → `shortest_path_binary_matrix.py`
+- **BFS with state**: Unweighted but need to track constraint → `shortest_path_get_all_keys.py` (state = pos + keys_bitmask)
+- **Dijkstra**: Weighted edges, need shortest cost → `cheapest_flights_k_stops.py` (with state: (cost, city, stops))
+- **DP**: Constraint is "at most K steps" → `cheapest_flights_k_stops.py` (dp[k][city] = min cost with k flights)
+
+**Red flag**: If you can revisit the same node with different constraint values, you need state in visited set.
+
+---
+
+### 2. **Sliding Window: Tracking counts correctly**
+
+**Common Mistake**: Off-by-one errors in count tracking, or wrong condition for "valid window"
+
+**Example - Wrong**:
+```python
+# minimum_window_substring.py
+# WRONG: Only check if char in need, don't track if we have enough
+if c in need:
+    need[c] -= 1  # But what if need[c] goes negative? Still valid?
+
+# RIGHT: Track "missing" count
+need = Counter(t)
+missing = len(t)  # Total chars we still need
+
+for right, c in enumerate(s):
+    if c in need:
+        if need[c] > 0:  # Only decrement missing if we actually needed it
+            missing -= 1
+        need[c] -= 1  # Can go negative (we have extra)
+    
+    while missing == 0:  # Valid window!
+        # shrink...
+```
+
+**Common mistakes**:
+- **Forgetting to check `need[c] > 0`** before decrementing missing count
+- **Shrinking too early**: Shrink only when window is valid AND you're trying to minimize
+- **Not resetting counts**: When shrinking, increment `need[s[left]]` and check if it becomes > 0
+
+**Red flag**: If your window validation logic seems convoluted, you're probably tracking counts wrong.
+
+---
+
+### 3. **DP: State definition and transition clarity**
+
+**Common Mistake**: Jumping into coding without clearly defining state, leading to wrong transitions
+
+**Example - Wrong**:
+```python
+# coin_change.py
+# WRONG: Unclear state definition
+dp = [0] * (amount + 1)
+for coin in coins:
+    for i in range(coin, amount + 1):
+        dp[i] = min(dp[i], dp[i-coin] + 1)  # But what if dp[i-coin] is impossible?
+
+# RIGHT: Clear state definition first
+# State: dp[i] = minimum coins to make amount i
+# Base: dp[0] = 0, dp[i] = inf for i > 0
+# Transition: For each coin, dp[i] = min(dp[i], dp[i-coin] + 1) if dp[i-coin] is valid
+dp = [float('inf')] * (amount + 1)
+dp[0] = 0
+for coin in coins:
+    for i in range(coin, amount + 1):
+        if dp[i-coin] != float('inf'):  # Check if previous state is valid
+            dp[i] = min(dp[i], dp[i-coin] + 1)
+```
+
+**Common mistakes**:
+- **Not defining base cases clearly**: What's dp[0]? What's impossible state?
+- **Wrong iteration order**: For 2D DP, iterate in order that ensures dependencies computed first
+- **Forgetting to check if previous state is valid**: Can't transition from impossible state
+
+**Red flag**: If you're not sure what `dp[i]` represents, stop and define it clearly.
+
+---
+
+### 4. **Graphs: Cycle detection and visited semantics**
+
+**Common Mistake**: Confusing "visited node" vs "visited state", leading to missed cycles or infinite loops
+
+**Example - Wrong**:
+```python
+# aliendictionary.py - Topological sort
+# WRONG: Using visited = set() for DFS toposort
+visited = set()
+def dfs(node):
+    if node in visited:  # This catches cycles, but also prevents revisiting!
+        return
+    visited.add(node)
+    # ... but what if we need to detect cycles separately?
+
+# RIGHT: Separate "visiting" (gray) vs "visited" (black) for cycle detection
+WHITE, GRAY, BLACK = 0, 1, 2
+color = {char: WHITE for char in graph}
+result = []
+
+def dfs(node):
+    if color[node] == GRAY:  # Cycle detected!
+        return False
+    if color[node] == BLACK:  # Already processed
+        return True
+    color[node] = GRAY  # Mark as visiting
+    for neighbor in graph[node]:
+        if not dfs(neighbor):
+            return False
+    color[node] = BLACK  # Mark as visited
+    result.append(node)  # Add to result when backtracking
+    return True
+```
+
+**Common mistakes**:
+- **BFS toposort**: Forgetting to check if all nodes processed (if queue empty but nodes remain → cycle)
+- **DFS toposort**: Not distinguishing "currently visiting" (gray) vs "fully processed" (black)
+- **State-space BFS**: Using `visited = {node}` when state is `(node, constraint)` → need `visited = {(node, constraint)}`
+
+**Red flag**: If you're getting infinite loops or missing cycles, check your visited semantics.
+
+---
+
+### 5. **Backtracking: Not restoring state correctly**
+
+**Common Mistake**: Forgetting to undo changes when backtracking, or modifying shared state
+
+**Example - Wrong**:
+```python
+# word_search.py
+# WRONG: Not restoring board state
+def dfs(i, j, word_idx):
+    if word_idx == len(word):
+        return True
+    board[i][j] = '#'  # Mark as visited
+    for di, dj in directions:
+        if dfs(i+di, j+dj, word_idx+1):
+            return True
+    # FORGOT: board[i][j] = word[word_idx]  # Restore!
+    return False
+
+# RIGHT: Always restore state
+def dfs(i, j, word_idx):
+    if word_idx == len(word):
+        return True
+    temp = board[i][j]
+    board[i][j] = '#'  # Mark as visited
+    for di, dj in directions:
+        if dfs(i+di, j+dj, word_idx+1):
+            return True
+    board[i][j] = temp  # RESTORE before returning False
+    return False
+```
+
+**Red flag**: If your backtracking solution works for first path but fails for subsequent paths, you're not restoring state.
+
+---
+
+### 6. **Edge Cases: Off-by-one, empty inputs, boundaries**
+
+**Common Mistakes**:
+- **Empty string/array**: `if not s: return ""` vs `if len(s) == 0: return ""`
+- **Single element**: Does your loop handle `[1]` correctly?
+- **Boundary conditions**: `i < len(arr)` vs `i <= len(arr) - 1`
+- **Index out of bounds**: Accessing `arr[i+1]` without checking `i < len(arr) - 1`
+
+**Quick check**: Before coding, ask: "What if input is empty? Single element? All same values?"
+
+---
+
+### 7. **Time/Space Complexity: Stating incorrectly**
+
+**Common Mistake**: Saying O(n) when it's O(n log n) due to sorting, or forgetting nested loops
+
+**Examples**:
+- **Sliding window**: O(n) time (each element visited at most twice), O(k) space (k = unique chars)
+- **BFS**: O(V + E) time, O(V) space for visited set
+- **DP**: O(n * m) time if 2D table, O(n) if space-optimized
+- **Backtracking**: O(branching_factor^depth) worst case, but often much better with pruning
+
+**Red flag**: If you say "O(n)" but have nested loops or sorting, recalculate.
