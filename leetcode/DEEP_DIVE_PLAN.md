@@ -9,25 +9,69 @@ Goals for today:
 
 ---
 
-## ✅ Quick “If you see this → do this” templates
+## ✅ Pattern Recognition (Mental Models)
 
-- **Minimum window / substring with constraints** → Sliding window with counts  
-  (`minimum_window_substring.py`, `longest_substring_without_repeating_characters.py`, `subarray_product_less_than_k.py`)
+### **Sliding Window** (when you see: contiguous substring/subarray with constraints)
+- **Contiguous Substring**: We're looking for a contiguous segment
+- **Expand Right**: Add characters to window (move right pointer)
+- **Shrink Left**: Remove characters when constraint violated (move left pointer)
+- **Track Characters**: Use set or map to track characters in current window
+- **Key Insight**: Two pointers maintain a valid window, expand until invalid, then shrink
 
-- **Unweighted shortest path in grid / state space** → BFS (queue), visited, layers  
-  (`shortest_path_binary_matrix.py`, `shortest_path_get_all_keys.py`, `sliding_puzzle.py`)
+Examples: `minimum_window_substring.py`, `longest_substring_without_repeating_characters.py`, `subarray_product_less_than_k.py`
 
-- **Shortest path with constraints (K stops / extra state)** → Dijkstra-with-state OR Bellman-Ford DP  
-  (`cheapest_flights_k_stops.py`)
+---
 
-- **“Min cost / max profit / ways”** → DP (pick state carefully, then iterate)  
-  (`coin_change.py`, `edit_distance.py`, `house_robber*.py`, `maximum_profit_job_scheduling.py`, `maxsquare.py`)
+### **BFS Shortest Path** (when you see: unweighted shortest path in grid/state space)
+- **Queue + Visited**: BFS explores layer by layer (guarantees shortest path)
+- **State Encoding**: What makes a state unique? (position, keys collected, steps taken)
+- **Layer-by-Layer**: Process all nodes at distance d before distance d+1
+- **Early Termination**: Return as soon as target found (first time = shortest)
 
-- **“Order with dependencies / alien language”** → Topological sort (+ cycle detection)  
-  (`aliendictionary.py`)
+Examples: `shortest_path_binary_matrix.py`, `sliding_puzzle.py`, `shortest_path_get_all_keys.py`
 
-- **Search all combinations / board backtracking** → DFS + pruning  
-  (`combination_sum.py`, `word_search.py`, `word_search_ii.py`, `shopping_offers.py`, `pyramid_transition_matrix.py`)
+---
+
+### **Constrained Shortest Path** (when you see: shortest path with K stops / extra constraints)
+- **State = (node, constraint_value)**: e.g., (city, stops_used) or (pos, keys_bitmask)
+- **Two Approaches**:
+  - **Dijkstra with state**: Priority queue on (cost, node, constraint)
+  - **Bellman-Ford DP**: `dp[k][node]` = min cost reaching node using k steps
+- **Why BFS fails**: Need to track constraint dimension separately
+
+Example: `cheapest_flights_k_stops.py`
+
+---
+
+### **Dynamic Programming** (when you see: min cost / max profit / count ways)
+- **Define State**: What information do I need to make a decision?
+- **Transition**: How do I get to this state from previous states?
+- **Base Cases**: What are the smallest subproblems?
+- **Order**: Iterate in order that ensures dependencies are computed first
+
+Examples: `coin_change.py`, `edit_distance.py`, `house_robber*.py`, `maximum_profit_job_scheduling.py`
+
+---
+
+### **Topological Sort** (when you see: ordering with dependencies / prerequisites)
+- **Build Graph**: Dependencies = edges (A → B means A before B)
+- **Two Approaches**:
+  - **Kahn's (BFS)**: Start with nodes with 0 in-degree, process layer by layer
+  - **DFS**: Do DFS, add to result when backtracking (reverse order)
+- **Cycle Detection**: If can't process all nodes → cycle exists
+
+Example: `aliendictionary.py`
+
+---
+
+### **Backtracking / DFS** (when you see: find all combinations / search board)
+- **State**: Current partial solution (path so far)
+- **Choices**: What can I add next?
+- **Constraints**: What makes a choice invalid?
+- **Pruning**: Skip branches that can't lead to valid solutions
+- **Backtrack**: Remove last choice when exploring next branch
+
+Examples: `combination_sum.py`, `word_search.py`, `word_search_ii.py`, `shopping_offers.py`
 
 ---
 
